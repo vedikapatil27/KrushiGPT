@@ -985,20 +985,38 @@ function addUserMessageWithImage(message, imageUrl) {
 }
 
 // Add bot message to chat
-function addBotMessage(message, saveToChat = true) {
-  const now = new Date()
-  const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+// New formatting function
+function formatBotMessage(message) {
+  // 1. Bold headings like **Heading**
+  message = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-  const messageElement = document.createElement("div")
-  messageElement.className = "chat-message bot-message"
+  // 2. Bullet points for lines starting with '* '
+  message = message.replace(/\* /g, '<br>\u2022 '); // Unicode for • symbol
+
+  // 3. Remove any extra * (if any)
+  message = message.replace(/\*/g, '');
+
+  return message.trim();
+}
+
+// Updated addBotMessage
+function addBotMessage(message, saveToChat = true) {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  // 🛠 Format the incoming bot message
+  const formattedMessage = formatBotMessage(message);
+
+  const messageElement = document.createElement("div");
+  messageElement.className = "chat-message bot-message";
   messageElement.innerHTML = `
     <div class="message-bubble">
-      ${message}
+      ${formattedMessage}
       <div class="message-time">${timeString}</div>
     </div>
-  `
-  chatBox.appendChild(messageElement)
-  chatBox.scrollTop = chatBox.scrollHeight
+  `;
+  chatBox.appendChild(messageElement);
+  chatBox.scrollTop = chatBox.scrollHeight;
 
   // Play notification sound if enabled and user has interacted with the page
   if (soundToggle.checked && document.body.classList.contains('user-interacted')) {
@@ -1009,16 +1027,17 @@ function addBotMessage(message, saveToChat = true) {
 
   // Save message to current chat
   if (saveToChat && saveHistory.checked) {
-    const chat = chats.find((c) => c.id === currentChatId)
+    const chat = chats.find((c) => c.id === currentChatId);
     if (chat) {
       chat.messages.push({
         role: "assistant",
-        content: message,
+        content: message,  // Note: original message saved
         timestamp: now,
-      })
+      });
     }
   }
 }
+
 
 // Show typing indicator
 function showTypingIndicator() {

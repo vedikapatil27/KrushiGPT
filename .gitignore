@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.env
+
+# Environment & Secrets
+.env
+.env.*
+
+# Flask instance folders
+instance/
+*.db
+*.sqlite3
+
+# VSCode settings (optional)
+.vscode/
+
+# MacOS and system files
+.DS_Store
+Thumbs.db
+
+# Upload and audio files (optional)
+static/uploads/
+audio/
+
+# Logs
+*.log

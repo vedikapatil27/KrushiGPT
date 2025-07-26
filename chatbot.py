@@ -1,36 +1,37 @@
-from flask import Flask, request, jsonify, render_template , send_file
+from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
+from flask_babel import Babel, get_locale
 import google.generativeai as genai
 import requests
-import mimetypes  # Add this at the top if not already
+import mimetypes
 import os
 import uuid
 from gtts import gTTS
-from flask_babel import Babel, _
-from flask_babel import get_locale
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-app.config['BABEL_DEFAULT_LOCALE'] = 'en'
-app.config['BABEL_SUPPORTED_LOCALES'] = ['en', 'hi', 'mr', 'gu', 'ta', 'te', 'bn', 'pa']
+# Config from .env
+app.config['BABEL_DEFAULT_LOCALE'] = os.getenv('BABEL_DEFAULT_LOCALE', 'en')
+app.config['BABEL_SUPPORTED_LOCALES'] = os.getenv('BABEL_SUPPORTED_LOCALES', 'en').split(',')
 
-# 🔑 Gemini API key
-genai.configure(api_key="AIzaSyCfO9vuvYMRO4dNDsQ45WN25wTNVKM_Org")
+# Configure Gemini API
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("models/gemini-1.5-flash-latest")
+print(os.getenv("GEMINI_API_KEY"))
 
-# 📌 Use Gemini 1.5 Pro for both text and image
-model = genai.GenerativeModel("models/gemini-1.5-pro")
+# Weather API
+WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 
-# 🌐 Weather API (OpenWeatherMap)
-WEATHER_API_KEY = "a23b5e425e7b8153999b8b2369bf64c5"
-
-# 📁 Image Uploads
+# Folders
 UPLOAD_FOLDER = os.path.join("static", "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 AUDIO_FOLDER = 'audio'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(AUDIO_FOLDER, exist_ok=True)
-
 
 babel = Babel(app)
 
@@ -48,11 +49,6 @@ def index():
 
 chat_history = []
 
-# @babel.localeselector
-# def get_locale():
-#     return request.args.get('lang') or 'en' 
-
-
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
@@ -60,20 +56,18 @@ def chat():
         user_message = data.get("message", "")
         selected_lang = data.get("language", "en")
         image_filename = data.get("imageFilename")
-        chat_history = data.get("history", [])  # Get chat history from the request
+        chat_history = data.get("history", [])
 
-        # Include the last 5 messages for context
         chat_context = ""
-        for entry in chat_history[-5:]:  # last 5 messages to maintain relevance
+        for entry in chat_history[-5:]:
             chat_context += f"User: {entry['user']}\nBot: {entry['bot']}\n"
 
-        # Gemini instruction with context
         instruction = (
             "You are a warm, friendly, and intelligent agriculture assistant named KrushiGPT. "
             "Your main job is to answer agriculture-related questions about crops, soil, weather, fertilizers, pests, irrigation, and farming techniques. "
-            "If the user engages in small talk (like greetings, casual questions, or compliments), feel free to respond in a friendly way before gently guiding the conversation back to agriculture. "
-            "If the question is completely unrelated to agriculture, respond politely and subtly shift the topic back to farming without rejecting the user or sounding robotic.\n\n"
-            f"Respond in a helpful, conversational tone using this language: {selected_lang}.\n\n"
+            "If the user engages in small talk, respond in a friendly way before gently guiding the conversation back to agriculture. "
+            "If the question is unrelated to agriculture, respond politely and shift the topic back to farming.\n\n"
+            f"Respond in this language: {selected_lang}.\n\n"
             f"Previous conversation:\n{chat_context}\n"
             f"User: {user_message}\nBot:"
         )
@@ -84,11 +78,9 @@ def chat():
                 "Provide answers based on both the text and image content."
             )
 
-        # Generate response from model
         response = model.generate_content(instruction)
         gemini_reply = response.text.strip() if hasattr(response, "text") else "Sorry, I couldn't generate a response."
 
-        # Store to chat history
         chat_history.append({
             "user": user_message,
             "bot": gemini_reply
@@ -96,14 +88,14 @@ def chat():
 
         return jsonify({
             "reply": gemini_reply,
-            "history": chat_history[-10:]  # Return the last 10 chat entries
+            "history": chat_history[-10:]
         })
 
     except Exception as e:
         print("❌ Error in /chat route:", e)
         return jsonify({
             "reply": "Something went wrong. Please try again.",
-            "history": chat_history[-10:]  # Return the last 10 chat entries
+            "history": chat_history[-10:]
         })
 
 @app.route("/upload", methods=["POST"])
@@ -113,7 +105,6 @@ def upload():
             return jsonify({"message": "No image found!"})
 
         image = request.files["image"]
-
         if image.filename == "":
             return jsonify({"message": "Image not selected."})
 
@@ -131,7 +122,6 @@ def upload():
         print("Upload error:", e)
         return jsonify({"message": "Failed to upload the image."})
 
-
 @app.route("/image-processing", methods=["POST"])
 def image_processing():
     try:
@@ -144,7 +134,6 @@ def image_processing():
             return jsonify({"message": "Missing filename or question."})
 
         image_path = os.path.join(UPLOAD_FOLDER, filename)
-
         if not os.path.exists(image_path):
             return jsonify({"message": "Image not found on server."})
 
@@ -155,8 +144,7 @@ def image_processing():
             instruction = (
                 "You are a smart, friendly agriculture assistant. "
                 "Analyze the uploaded image in the context of the user's question. "
-                "Give a helpful and accurate answer related to agriculture (e.g. crops, soil, pests, diseases, etc). "
-                "If the image is not related to agriculture at all, gently inform the user.\n\n"
+                "Give a helpful and accurate answer related to agriculture.\n\n"
                 f"Respond in this language: {selected_lang}.\n\n"
                 f"User's Question: {user_message}\n\nBased on the image and message, your reply:"
             )
@@ -170,7 +158,6 @@ def image_processing():
             ])
 
         reply = response.text.strip() if hasattr(response, "text") else "Image received but analysis failed."
-
         related = "not related" not in reply.lower()
 
         return jsonify({
@@ -180,61 +167,6 @@ def image_processing():
 
     except Exception as e:
         return jsonify({"message": "Failed to analyze the image."})
-
-# @app.route("/upload", methods=["POST"])
-# def upload():
-#     try:
-#         # Check if the image is in the request
-#         if "image" not in request.files:
-#             return jsonify({"message": "No image found!"})
-
-#         image = request.files["image"]
-#         user_message = request.form.get("message", "")  # 👈 user’s input
-#         selected_lang = request.form.get("language", "en")
-
-#         # Check if the image has a filename
-#         if image.filename == "":
-#             return jsonify({"message": "Image not selected."})
-
-#         # Save the image to the upload folder
-#         filename = f"{uuid.uuid4().hex}_{image.filename}"
-#         image_path = os.path.join(UPLOAD_FOLDER, filename)
-#         image.save(image_path)
-
-#         # Process the image
-#         with open(image_path, "rb") as img_file:
-#             image_data = img_file.read()
-#             mime_type = image.mimetype
-
-#             # 🧠 Detailed instruction combining both image + user message
-#             instruction = (
-#                 "You are a smart, friendly agriculture assistant. "
-#                 "Analyze the uploaded image in the context of the user's question. "
-#                 "Give a helpful and accurate answer related to agriculture (e.g. crops, soil, pests, diseases, etc). "
-#                 "If the image is not related to agriculture at all, gently inform the user.\n\n"
-#                 f"Respond in this language: {selected_lang}.\n\n"
-#                 f"User's Question: {user_message}\n\nBased on the image and message, your reply:"
-#             )
-
-#             response = model.generate_content([
-#                 instruction,
-#                 {
-#                     "mime_type": mime_type,
-#                     "data": image_data
-#                 }
-#             ])
-
-#         reply = response.text.strip() if hasattr(response, "text") else "Image received but analysis failed."
-#         related = "not related" not in reply.lower()
-
-#         return jsonify({
-#             "message": reply,
-#             "filename": filename if related else None,
-#             "related": related
-#         })
-
-#     except Exception as e:
-#         return jsonify({"message": "Failed to analyze the image."})
 
 @app.route("/delete-upload", methods=["POST"])
 def delete_upload():
@@ -255,23 +187,14 @@ def delete_upload():
 @app.route("/delete-all-uploads", methods=["POST"])
 def delete_all_uploads():
     try:
-        for filename in os.listdir(UPLOAD_FOLDER):
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-                
-        for filename in os.listdir(AUDIO_FOLDER):
-            file_path = os.path.join(AUDIO_FOLDER, filename)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-                
-                
+        for folder in [UPLOAD_FOLDER, AUDIO_FOLDER]:
+            for filename in os.listdir(folder):
+                file_path = os.path.join(folder, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
         return jsonify({"message": "All uploads deleted successfully."})
     except Exception as e:
         return jsonify({"message": "Failed to delete uploads.", "error": str(e)}), 500
-    
-    
-    
 
 @app.route("/weather")
 def weather():
@@ -307,33 +230,27 @@ def weather():
         print("❌ Weather error:", e)
         return jsonify({"error": "Failed to fetch weather info"})
 
-    
-    
 @app.route('/text-to-speech', methods=['POST'])
 def text_to_speech():
     data = request.json
     text = data.get('text')
-    lang = data.get('lang', 'en')  # Default language is English
+    lang = data.get('lang', 'en')
 
     if not text:
         return {'error': 'No text provided'}, 400
 
-    # Generate unique filename
     filename = os.path.join(AUDIO_FOLDER, f"tts_{uuid.uuid4().hex}.mp3")
     tts = gTTS(text=text, lang=lang)
     tts.save(filename)
 
-    # Return the mp3 file as a response
     response = send_file(filename, mimetype='audio/mpeg')
 
-    # Clean up after sending
     @response.call_on_close
     def cleanup():
         if os.path.exists(filename):
             os.remove(filename)
 
     return response
-
 
 if __name__ == "__main__":
     app.run(debug=True)
