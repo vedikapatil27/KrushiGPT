@@ -22,7 +22,7 @@ app.config['BABEL_SUPPORTED_LOCALES'] = os.getenv('BABEL_SUPPORTED_LOCALES', 'en
 
 # Configure Gemini API
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("models/gemini-2.5-flash")
+model = genai.GenerativeModel("models/gemini-flash-lite-latest")
 print(os.getenv("GEMINI_API_KEY"))
 
 # Weather API
