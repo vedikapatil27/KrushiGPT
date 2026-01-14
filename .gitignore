@@ -26,5 +26,8 @@ Thumbs.db
 static/uploads/
 audio/
 
+# Large video files
+static/videos/background.mp4
+
 # Logs
 *.log
