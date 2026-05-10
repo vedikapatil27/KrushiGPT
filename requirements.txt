@@ -1,8 +1,70 @@
+# Core Flask Framework
 Flask==3.0.0
+Werkzeug==3.1.8
+Jinja2==3.1.6
+itsdangerous==2.2.0
+click==8.1.8
+blinker==1.9.0
+MarkupSafe==3.0.3
+
+# CORS Support
 Flask-Cors==4.0.0
-google-generativeai==0.8.6
-requests==2.31.0
-gTTS==2.5.1
+
+# Internationalization
 Flask-Babel==4.0.0
-gunicorn==23.0.0
+Babel==2.18.0
+pytz==2026.2
+
+# AI and Machine Learning
+google-generativeai==0.8.6
+google-ai-generativelanguage==0.6.15
+google-api-core==2.30.3
+google-api-python-client==2.196.0
+google-auth==2.52.0
+google-auth-httplib2==0.4.0
+googleapis-common-protos==1.75.0
+grpcio==1.80.0
+grpcio-status==1.71.2
+proto-plus==1.28.0
+protobuf==5.29.6
+
+# HTTP Requests
+requests==2.31.0
+urllib3==1.26.5
+certifi==2020.6.20
+charset-normalizer==3.4.4
+idna==3.3
+
+# Text-to-Speech
+gTTS==2.5.1
+
+# Environment Variables
 python-dotenv==1.0.0
+
+# Production Server
+gunicorn==23.0.0
+
+# Additional Dependencies
+cryptography==48.0.0
+cffi==2.0.0
+pycparser==3.0
+six==1.16.0
+packaging==26.2
+pyasn1==0.6.3
+pyasn1-modules==0.4.2
+rsa==4.9
+httplib2==0.20.2
+pyparsing==2.4.7
+uritemplate==4.2.0
+
+typing_extensions==4.15.0
+typing-inspection==0.4.2
+annotated-types==0.7.0
+pydantic==2.13.4
+pydantic-core==2.46.4
+
+tqdm==4.67.3
+
+# Optional: For image processing (if needed in future)
+# Pillow==10.0.0
+# opencv-python==4.8.0.76
